@@ -87,7 +87,7 @@ from math import sqrt, cos, sin, pi
 from kivy.event import EventDispatcher
 from kivy.clock import Clock
 from kivy.compat import string_types, iterkeys
-from weakref import ProxyType
+from kivy.weakproxy import WeakProxy
 
 
 class Animation(EventDispatcher):
@@ -120,17 +120,14 @@ class Animation(EventDispatcher):
     __events__ = ('on_start', 'on_progress', 'on_complete')
 
     def __init__(self, **kw):
-        super(Animation, self).__init__(**kw)
-
+        super(Animation, self).__init__()
         # Initialize
         self._clock_installed = False
-        self._duration = kw.get('d', kw.get('duration', 1.))
-        self._transition = kw.get('t', kw.get('transition', 'linear'))
-        self._step = kw.get('s', kw.get('step', 1. / 60.))
+        self._duration = kw.pop('d', kw.pop('duration', 1.))
+        self._transition = kw.pop('t', kw.pop('transition', 'linear'))
+        self._step = kw.pop('s', kw.pop('step', 1. / 60.))
         if isinstance(self._transition, string_types):
             self._transition = getattr(AnimationTransition, self._transition)
-        for key in ('d', 't', 's', 'step', 'duration', 'transition'):
-            kw.pop(key, None)
         self._animated_properties = kw
         self._widgets = {}
 
@@ -312,7 +309,7 @@ class Animation(EventDispatcher):
             anim = widgets[uid]
             widget = anim['widget']
 
-            if isinstance(widget, ProxyType) and not len(dir(widget)):
+            if isinstance(widget, WeakProxy) and not len(dir(widget)):
                 # empty proxy, widget is gone. ref: #2458
                 del widgets[uid]
                 continue

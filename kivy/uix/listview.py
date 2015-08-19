@@ -705,6 +705,9 @@ class CompositeListItem(SelectableView, BoxLayout):
     '''
 
     def __init__(self, **kwargs):
+        cls_dicts = kwargs.pop('cls_dicts')
+        text = kwargs.pop('text', None)
+        index = kwargs['index']
         super(CompositeListItem, self).__init__(**kwargs)
 
         # Example data:
@@ -720,30 +723,27 @@ class CompositeListItem(SelectableView, BoxLayout):
         # There is an index to the data item this composite list item view
         # represents. Get it from kwargs and pass it along to children in the
         # loop below.
-        index = kwargs['index']
 
-        for cls_dict in kwargs['cls_dicts']:
+        for cls_dict in cls_dicts:
             cls = cls_dict['cls']
             cls_kwargs = cls_dict.get('kwargs', None)
 
             if cls_kwargs:
                 cls_kwargs['index'] = index
 
-                if 'selection_target' not in cls_kwargs:
-                    cls_kwargs['selection_target'] = self
-
                 if 'text' not in cls_kwargs:
-                    cls_kwargs['text'] = kwargs['text']
+                    cls_kwargs['text'] = text
 
                 if 'is_representing_cls' in cls_kwargs:
+                    del cls_kwargs['is_representing_cls']
                     self.representing_cls = cls
 
                 self.add_widget(cls(**cls_kwargs))
             else:
                 cls_kwargs = {}
                 cls_kwargs['index'] = index
-                if 'text' in kwargs:
-                    cls_kwargs['text'] = kwargs['text']
+                if text is not None:
+                    cls_kwargs['text'] = text
                 self.add_widget(cls(**cls_kwargs))
 
     def select(self, *args):
@@ -794,13 +794,13 @@ class ListView(AbstractView, EventDispatcher):
     :class:`~kivy.uix.abstractview.AbstractView` class.
 
     :class:`~kivy.uix.listview.ListView` also subclasses
-    :class:`EventDispatcher` for scrolling.  The event *on_scroll_complete* is
+    :class:`EventDispatcher` for scrolling. The event *on_scroll_complete* is
     used in refreshing the main view.
 
     For a simple list of string items, without selection, use
     :class:`~kivy.adapters.simplelistadapter.SimpleListAdapter`. For list items
     that respond to selection, ranging from simple items to advanced
-    composites, use :class:`~kivy.adapters.listadapter.ListAdapter`.  For an
+    composites, use :class:`~kivy.adapters.listadapter.ListAdapter`. For an
     alternate powerful adapter, use
     :class:`~kivy.adapters.dictadapter.DictAdapter`, rounding out the choice
     for designing highly interactive lists.
@@ -890,27 +890,29 @@ class ListView(AbstractView, EventDispatcher):
 
         super(ListView, self).__init__(**kwargs)
 
-        self._trigger_populate = Clock.create_trigger(self._spopulate, -1)
+        populate = self._trigger_populate = Clock.create_trigger(
+            self._spopulate, -1)
         self._trigger_reset_populate = \
             Clock.create_trigger(self._reset_spopulate, -1)
 
-        self.bind(size=self._trigger_populate,
-                  pos=self._trigger_populate,
-                  item_strings=self.item_strings_changed,
-                  adapter=self._trigger_populate)
+        fbind = self.fbind
+        fbind('size', populate)
+        fbind('pos', populate)
+        fbind('item_strings', self.item_strings_changed)
+        fbind('adapter', populate)
 
-        self._trigger_bind_adapter = Clock.create_trigger(
+        bind_adapter = self._trigger_bind_adapter = Clock.create_trigger(
             lambda dt: self.adapter.bind_triggers_to_view(
                 self._trigger_reset_populate),
             -1)
-        self.bind(adapter=self._trigger_bind_adapter)
+        fbind('adapter', bind_adapter)
 
         # The bindings setup above sets self._trigger_populate() to fire
         # when the adapter changes, but we also need this binding for when
         # adapter.data and other possible triggers change for view updating.
         # We don't know that these are, so we ask the adapter to set up the
         # bindings back to the view updating function here.
-        self._trigger_bind_adapter()
+        bind_adapter()
 
     # Added to set data when item_strings is set in a kv template, but it will
     # be good to have also if item_strings is reset generally.

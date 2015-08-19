@@ -3,8 +3,8 @@ Kivy framework
 ==============
 
 Kivy is an open source library for developing multi-touch applications. It is
-completely cross-platform (Linux/OSX/Win) and released under the terms of the
-MIT License.
+cross-platform (Linux/OSX/Windows/Android/iOS) and released under
+the terms of the `MIT License <https://en.wikipedia.org/wiki/MIT_License>`_.
 
 It comes with native support for many multi-touch input devices, a growing
 library of multi-touch aware widgets and hardware accelerated OpenGL drawing.
@@ -14,7 +14,7 @@ applications as quickly and easily as possible.
 With Kivy, you can take full advantage of the dynamic nature of Python. There
 are thousands of high-quality, free libraries that can be integrated in your
 application. At the same time, performance-critical parts are implemented
-in the C language.
+using `Cython <http://cython.org/>`_.
 
 See http://kivy.org for more information.
 '''
@@ -28,13 +28,13 @@ __all__ = (
     'kivy_config_fn', 'kivy_usermodules_dir',
 )
 
-__version__ = '1.9.0-dev'
+__version__ = '1.9.1-dev'
 
 import sys
 import shutil
 from getopt import getopt, GetoptError
-from os import environ, mkdir
-from os.path import dirname, join, basename, exists, expanduser
+from os import environ, mkdir, pathsep
+from os.path import dirname, join, basename, exists, expanduser, isdir
 from kivy.logger import Logger, LOG_LEVELS
 from kivy.utils import platform
 
@@ -135,6 +135,17 @@ def kivy_configure():
         callback()
 
 
+def get_includes():
+    '''Retrieves the directories containing includes needed to build new Cython
+    modules with Kivy as a dependency. Currently returns the location of the
+    kivy.graphics module.
+
+    .. versionadded:: 1.9.2
+    '''
+    root_dir = dirname(__file__)
+    return [join(root_dir, 'graphics'), join(root_dir, 'tools', 'gles_compat')]
+
+
 def kivy_register_post_configuration(callback):
     '''Register a function to be called when kivy_configure() is called.
 
@@ -181,18 +192,21 @@ def kivy_usage():
 
 #: Global settings options for kivy
 kivy_options = {
-    'window': ('egl_rpi', 'pygame', 'sdl', 'x11', 'sdl2'),
-    'text': ('pil', 'pygame', 'sdlttf', 'sdl2'),
+    'window': ('egl_rpi', 'sdl2', 'pygame', 'sdl', 'x11'),
+    'text': ('pil', 'sdl2', 'pygame', 'sdlttf'),
     'video': (
         'gstplayer', 'ffmpeg', 'ffpyplayer', 'gi', 'pygst', 'pyglet',
         'null'),
-    'audio': ('gstplayer', 'pygame', 'gi', 'pygst', 'ffpyplayer', 'sdl'),
-    'image': ('tex', 'imageio', 'dds', 'gif', 'pil', 'pygame', 'ffpy', 'sdl2'),
-    'camera': ('opencv', 'gi', 'pygst', 'videocapture', 'avfoundation'),
+    'audio': (
+        'gstplayer', 'pygame', 'gi', 'pygst', 'ffpyplayer', 'sdl2',
+        'avplayer'),
+    'image': ('tex', 'imageio', 'dds', 'gif', 'sdl2', 'pygame', 'pil', 'ffpy'),
+    'camera': ('opencv', 'gi', 'pygst', 'videocapture', 'avfoundation',
+               'android'),
     'spelling': ('enchant', 'osxappkit', ),
     'clipboard': (
-        'android', 'winctypes', 'dbusklipper', 'nspaste', 'pygame',
-        'sdl2', 'dummy'), }
+        'android', 'winctypes', 'xsel', 'xclip', 'dbusklipper', 'nspaste',
+        'sdl2', 'pygame', 'dummy', 'gtk3', )}
 
 # Read environment
 for option in kivy_options:
@@ -221,6 +235,9 @@ kivy_exts_dir = environ.get('KIVY_EXTS_DIR',
 #: Kivy data directory
 kivy_data_dir = environ.get('KIVY_DATA_DIR',
                             join(kivy_base_dir, 'data'))
+#: Kivy binary deps directory
+kivy_binary_deps_dir = environ.get('KIVY_BINARY_DEPS',
+                                   join(kivy_base_dir, 'binary_deps'))
 #: Kivy glsl shader directory
 kivy_shader_dir = join(kivy_data_dir, 'glsl')
 #: Kivy icons config path (don't remove the last '')
@@ -282,7 +299,9 @@ if not environ.get('KIVY_DOC_INCLUDE'):
     Logger.setLevel(level=level)
 
     # Can be overrided in command line
-    if 'KIVY_UNITTEST' not in environ and 'KIVY_PACKAGING' not in environ:
+    if ('KIVY_UNITTEST' not in environ and
+            'KIVY_PACKAGING' not in environ and
+            'KIVY_NO_ARGS' not in environ):
         # save sys argv, otherwize, gstreamer use it and display help..
         sys_argv = sys.argv
         sys.argv = sys.argv[:1]
@@ -291,16 +310,24 @@ if not environ.get('KIVY_DOC_INCLUDE'):
             opts, args = getopt(sys_argv[1:], 'hp:fkawFem:sr:dc:', [
                 'help', 'fullscreen', 'windowed', 'fps', 'event',
                 'module=', 'save', 'fake-fullscreen', 'auto-fullscreen',
-                'display=', 'size=', 'rotate=', 'config=', 'debug',
-                'dpi='])
+                'multiprocessing-fork', 'display=', 'size=', 'rotate=',
+                'config=', 'debug', 'dpi='])
 
         except GetoptError as err:
             Logger.error('Core: %s' % str(err))
             kivy_usage()
             sys.exit(2)
 
+        mp_fork = None
+        try:
+            mp_fork = opts['multiprocessing-fork']
+        except:
+            pass
+
         # set argv to the non-read args
         sys.argv = sys_argv[0:1] + args
+        if mp_fork is not None:
+            sys.argv = sys.argv + ['--multiprocessing-fork']
     else:
         opts = []
         args = []
@@ -374,6 +401,10 @@ if not environ.get('KIVY_DOC_INCLUDE'):
         Logger.info('Core: Kivy configuration saved.')
         sys.exit(0)
 
+    # add kivy_binary_deps_dir if it exists
+    if exists(kivy_binary_deps_dir):
+        environ["PATH"] = kivy_binary_deps_dir + pathsep + environ["PATH"]
+
     # configure all activated modules
     from kivy.modules import Modules
     Modules.configure()
@@ -388,6 +419,5 @@ if not environ.get('KIVY_DOC_INCLUDE'):
     if platform == 'android':
         Config.set('input', 'androidtouch', 'android')
 
-Logger.info('Kivy v%s' % (__version__))
+Logger.info('Kivy: v%s' % (__version__))
 Logger.info('Python: v{}'.format(sys.version))
-

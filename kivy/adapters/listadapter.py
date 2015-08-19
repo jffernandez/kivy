@@ -87,7 +87,7 @@ class ListAdapter(Adapter, EventDispatcher):
          is here so that selection can be turned off, momentarily or
          permanently, for an existing list adapter.
          A :class:`~kivy.adapters.listadapter.ListAdapter` is not meant to be
-         used as a primary no-selection list adapter.  Use a
+         used as a primary no-selection list adapter. Use a
          :class:`~kivy.adapters.simplelistadapter.SimpleListAdapter` for that.
 
        * 'single': multi-touch/click ignored. Single item selection only.
@@ -180,9 +180,10 @@ class ListAdapter(Adapter, EventDispatcher):
     def __init__(self, **kwargs):
         super(ListAdapter, self).__init__(**kwargs)
 
-        self.bind(selection_mode=self.selection_mode_changed,
-                  allow_empty_selection=self.check_for_empty_selection,
-                  data=self.update_for_new_data)
+        fbind = self.fbind
+        fbind('selection_mode', self.selection_mode_changed)
+        fbind('allow_empty_selection', self.check_for_empty_selection)
+        fbind('data', self.update_for_new_data)
 
         self.update_for_new_data()
 
@@ -237,7 +238,7 @@ class ListAdapter(Adapter, EventDispatcher):
         if self.propagate_selection_to_data:
             # The data item must be a subclass of SelectableDataItem, or must
             # have an is_selected boolean or function, so it has is_selected
-            # available.  If is_selected is unavailable on the data item, an
+            # available. If is_selected is unavailable on the data item, an
             # exception is raised.
             #
             if isinstance(item, SelectableDataItem):

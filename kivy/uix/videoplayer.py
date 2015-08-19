@@ -163,9 +163,12 @@ class VideoPlayerProgressBar(ProgressBar):
         self.bubble_label = Factory.Label(text='0:00')
         self.bubble.add_widget(self.bubble_label)
         self.add_widget(self.bubble)
-        self.bind(pos=self._update_bubble,
-                  size=self._update_bubble,
-                  seek=self._update_bubble)
+
+        update = self._update_bubble
+        fbind = self.fbind
+        fbind('pos', update)
+        fbind('size', update)
+        fbind('seek', update)
 
     def on_video(self, instance, value):
         self.video.bind(position=self._update_bubble,
@@ -338,7 +341,7 @@ class VideoPlayer(GridLayout):
         video.state = 'play'
 
     :attr:`state` is an :class:`~kivy.properties.OptionProperty` and defaults
-    to 'play'.
+    to 'stop'.
     '''
 
     play = BooleanProperty(False)
@@ -502,6 +505,12 @@ class VideoPlayer(GridLayout):
             self._video = None
         if value:
             self._trigger_video_load()
+
+    def on_image_overlay_play(self, instance, value):
+        self._image.image_overlay_play = value
+
+    def on_image_loading(self, instance, value):
+        self._image.image_loading = value
 
     def _load_thumbnail(self):
         if not self.container:

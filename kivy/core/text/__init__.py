@@ -18,7 +18,7 @@ you should only be using this directly if your needs aren't fulfilled by the
 
 Usage example::
 
-    from kivy.core.label import Label as CoreLabel
+    from kivy.core.text import Label as CoreLabel
 
     ...
     ...
@@ -45,13 +45,16 @@ from kivy.core import core_select_lib
 from kivy.core.text.text_layout import layout_text, LayoutWord
 from kivy.resources import resource_find, resource_add_path
 from kivy.compat import PY2
+from kivy.setupconfig import USE_SDL2
 
-DEFAULT_FONT = 'DroidSans'
+DEFAULT_FONT = 'Roboto'
 
 FONT_REGULAR = 0
 FONT_ITALIC = 1
 FONT_BOLD = 2
 FONT_BOLDITALIC = 3
+
+whitespace_pat = re.compile('( +)')
 
 
 class LabelBase(object):
@@ -105,12 +108,18 @@ class LabelBase(object):
         `strip` : bool, defaults to False
             Whether each row of text has its leading and trailing spaces
             stripped. If `halign` is `justify` it is implicitly True.
+        `strip_reflow` : bool, defaults to True
+            Whether text that has been reflowed into a second line should
+            be striped, even if `strip` is False. This is only in effect when
+            `size_hint_x` is not None, because otherwise lines are never
+            split.
         `unicode_errors` : str, defaults to `'replace'`
             How to handle unicode decode errors. Can be `'strict'`, `'replace'`
             or `'ignore'`.
 
     .. versionchanged:: 1.9.0
-        `strip`, `shorten_from`, `split_str`, and `unicode_errors` were added.
+        `strip`, `strip_reflow`, `shorten_from`, `split_str`, and
+        `unicode_errors` were added.
 
     .. versionchanged:: 1.9.0
         `padding_x` and `padding_y` has been fixed to work as expected.
@@ -141,11 +150,12 @@ class LabelBase(object):
 
     _texture_1px = None
 
-    def __init__(self, text='', font_size=12, font_name=DEFAULT_FONT,
-                 bold=False, italic=False, halign='left', valign='bottom',
-                 shorten=False, text_size=None, mipmap=False, color=None,
-                 line_height=1.0, strip=False, shorten_from='center',
-                 split_str=' ', unicode_errors='replace', **kwargs):
+    def __init__(
+        self, text='', font_size=12, font_name=DEFAULT_FONT, bold=False,
+        italic=False, halign='left', valign='bottom', shorten=False,
+        text_size=None, mipmap=False, color=None, line_height=1.0, strip=False,
+        strip_reflow=True, shorten_from='center', split_str=' ',
+        unicode_errors='replace', **kwargs):
 
         # Include system fonts_dir in resource paths.
         # This allows us to specify a font from those dirs.
@@ -155,8 +165,9 @@ class LabelBase(object):
                    'font_name': font_name, 'bold': bold, 'italic': italic,
                    'halign': halign, 'valign': valign, 'shorten': shorten,
                    'mipmap': mipmap, 'line_height': line_height,
-                   'strip': strip, 'shorten_from': shorten_from,
-                   'split_str': split_str, 'unicode_errors': unicode_errors}
+                   'strip': strip, 'strip_reflow': strip_reflow,
+                   'shorten_from': shorten_from, 'split_str': split_str,
+                   'unicode_errors': unicode_errors}
 
         options['color'] = color or (1, 1, 1, 1)
         options['padding'] = kwargs.get('padding', (0, 0))
@@ -441,41 +452,30 @@ class LabelBase(object):
 
         return chr('{0}...{1}').format(text[:e1], text[s2 + 1:])
 
-    def _render_real(self):
-        lines = self._cached_lines
-        options = None
+    def _default_line_options(self, lines):
         for line in lines:
             if len(line.words):  # get opts from first line, first word
-                options = line.words[0].options
-                break
-        if not options:  # there was no text to render
-            self._render_begin()
-            data = self._render_end()
-            assert(data)
-            if data is not None and data.width > 1:
-                self.texture.blit_data(data)
-            return
+                return line.words[0].options
+        return None
 
-        render_text = self._render_text
+    def clear_texture(self):
+        self._render_begin()
+        data = self._render_end()
+        assert(data)
+        if data is not None and data.width > 1:
+            self.texture.blit_data(data)
+        return
+
+    def render_lines(self, lines, options, render_text, y, size):
         get_extents = self.get_cached_extents()
         uw, uh = options['text_size']
-        xpad, ypad = options['padding_x'], options['padding_y']
-        x, y = xpad, ypad   # pos in the texture
-        iw, ih = self._internal_size  # the real size of text, not texture
+        xpad = options['padding_x']
         if uw is not None:
             uww = uw - 2 * xpad  # real width of just text
-        w, h = self.size
+        w = size[0]
         sw = options['space_width']
         halign = options['halign']
-        valign = options['valign']
         split = re.split
-        pat = re.compile('( +)')
-        self._render_begin()
-
-        if valign == 'bottom':
-            y = h - ih + ypad
-        elif valign == 'middle':
-            y = int((h - ih) / 2 + ypad)
 
         for layout_line in lines:  # for plain label each line has only one str
             lw, lh = layout_line.w, layout_line.h
@@ -501,7 +501,7 @@ class LabelBase(object):
                 words = None
                 if n or rem:
                     # there's no trailing space when justify is selected
-                    words = split(pat, line)
+                    words = split(whitespace_pat, line)
                 if words is not None and len(words) > 1:
                     space = type(line)(' ')
                     # words: every even index is spaces, just add ltr n spaces
@@ -527,10 +527,32 @@ class LabelBase(object):
                 layout_line.y = y
                 render_text(line, x, y)
             y += lh
+        return y
+
+    def _render_real(self):
+        lines = self._cached_lines
+        options = self._default_line_options(lines)
+        if options is None:  # there was no text to render
+            return self.clear_texture()
+
+        old_opts = self.options
+        ih = self._internal_size[1]  # the real size of text, not texture
+        size = self.size
+        valign = options['valign']
+
+        y = ypad = options['padding_y']  # pos in the texture
+        if valign == 'bottom':
+            y = size[1] - ih + ypad
+        elif valign == 'middle':
+            y = int((size[1] - ih) / 2 + ypad)
+
+        self._render_begin()
+        self.render_lines(lines, options, self._render_text, y, size)
 
         # get data from provider
         data = self._render_end()
         assert(data)
+        self.options = old_opts
 
         # If the text is 1px width, usually, the data is black.
         # Don't blit that kind of data, otherwise, you have a little black bar.
@@ -550,23 +572,14 @@ class LabelBase(object):
                                     options['halign'][-1] == 'y')
         uw, uh = options['text_size'] = self._text_size
         text = self.text
-        if not strip:
-            # all text will be stripped by default. unicode NO-BREAK SPACE
-            # characters will be preserved, so we replace the leading and
-            # trailing spaces with \u00a0
-            text = text.decode('utf8', errors=options['unicode_errors'])\
-                if isinstance(text, bytes) else text
-            lspace = len(text) - len(text.lstrip())
-            rspace = len(text) - len(text.rstrip())
-            text = (u'\u00a0' * lspace) + text.strip() + (u'\u00a0' * rspace)
+        if strip:
+            text = text.strip()
         if uw is not None and options['shorten']:
             text = self.shorten(text)
         self._cached_lines = lines = []
         if not text:
             return 0, 0
 
-        ostrip = options['strip']
-        strip = options['strip'] = True
         if uh is not None and options['valign'][-1] == 'e':  # middle
             center = -1  # pos of newline
             if len(text) > 1:
@@ -592,7 +605,6 @@ class LabelBase(object):
         else:  # top or bottom
             w, h, clipped = layout_text(text, lines, (0, 0), (uw, uh), options,
                 self.get_cached_extents(), options['valign'][-1] == 'p', True)
-        options['strip'] = ostrip
         self._internal_size = w, h
         if uw:
             w = uw
@@ -723,12 +735,14 @@ class LabelBase(object):
                         doc='''(deprecated) Use text_size instead.''')
 
 # Load the appropriate provider
-Label = core_select_lib('text', (
-    ('pygame', 'text_pygame', 'LabelPygame'),
-    ('sdl2', 'text_sdl2', 'LabelSDL2'),
-    ('sdlttf', 'text_sdlttf', 'LabelSDLttf'),
-    ('pil', 'text_pil', 'LabelPIL'),
-))
+label_libs = []
+if USE_SDL2:
+    label_libs += [('sdl2', 'text_sdl2', 'LabelSDL2')]
+else:
+    label_libs += [('pygame', 'text_pygame', 'LabelPygame')]
+label_libs += [
+    ('pil', 'text_pil', 'LabelPIL')]
+Label = core_select_lib('text', label_libs)
 
 if 'KIVY_DOC' not in os.environ:
     if not Label:
@@ -738,9 +752,8 @@ if 'KIVY_DOC' not in os.environ:
         sys.exit(1)
 
 # For the first initalization, register the default font
-    Label.register('DroidSans',
-                   'data/fonts/DroidSans.ttf',
-                   'data/fonts/DroidSans-Italic.ttf',
-                   'data/fonts/DroidSans-Bold.ttf',
-                   'data/fonts/DroidSans-BoldItalic.ttf')
-
+    Label.register('Roboto',
+                   'data/fonts/Roboto-Regular.ttf',
+                   'data/fonts/Roboto-Italic.ttf',
+                   'data/fonts/Roboto-Bold.ttf',
+                   'data/fonts/Roboto-BoldItalic.ttf')

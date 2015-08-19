@@ -82,7 +82,7 @@ properties of that class.
     ============== =================================================
 
 In the JSON example above, the first element is of type "title". It will create
-a new instance of :class:`SettingTitle` and apply the rest of the key/value
+a new instance of :class:`SettingTitle` and apply the rest of the key-value
 pairs to the properties of that class, i.e. "title": "Windows" sets the
 :attr:`SettingTitle.title` property to "Windows".
 
@@ -366,7 +366,7 @@ class SettingString(SettingItem):
     def on_panel(self, instance, value):
         if value is None:
             return
-        self.bind(on_release=self._create_popup)
+        self.fbind('on_release', self._create_popup)
 
     def _dismiss(self, *largs):
         if self.textinput:
@@ -443,7 +443,7 @@ class SettingPath(SettingItem):
     def on_panel(self, instance, value):
         if value is None:
             return
-        self.bind(on_release=self._create_popup)
+        self.fbind('on_release', self._create_popup)
 
     def _dismiss(self, *largs):
         if self.textinput:
@@ -540,7 +540,7 @@ class SettingOptions(SettingItem):
     def on_panel(self, instance, value):
         if value is None:
             return
-        self.bind(on_release=self._create_popup)
+        self.fbind('on_release', self._create_popup)
 
     def _set_option(self, instance):
         self.value = instance.text
@@ -853,7 +853,7 @@ class Settings(BoxLayout):
 
     :Events:
         `on_config_change`: ConfigParser instance, section, key, value
-            Fired when section/key/value of a ConfigParser changes.
+            Fired when the section's key-value pair of a ConfigParser changes.
 
             .. warning:
 

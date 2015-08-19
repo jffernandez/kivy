@@ -14,7 +14,7 @@ The `KV` language (sometimes called kvlang, or kivy language), allows you to
 create your widget tree in a declarative way and to bind widget properties
 to each other or to callbacks in a natural manner. It allows for very fast
 prototyping and agile changes to your UI. It also facilitates a good
-separation between the logic of your application and it's User Interface.
+separation between the logic of your application and its User Interface.
 
 How to load KV
 --------------
@@ -77,10 +77,14 @@ There are two special syntax to define values for the whole Kv context:
 To import something from python::
 
     #:import name x.y.z
+    #:import isdir os.path.isdir
+    #:import np numpy
 
 Is equivalent to::
 
     from x.y import z as name
+    from os.path import isdir
+    import numpy as np
 
 in python.
 
@@ -213,7 +217,7 @@ Referencing Widgets
 -------------------
 
 In a widget tree there is often a need to access/reference other widgets.
-Kv Language provides a way to do this using id's. Think of them as class
+The Kv Language provides a way to do this using id's. Think of them as class
 level variables that can only be used in the Kv language. Consider the
 following:
 
@@ -321,7 +325,8 @@ the function `check_status`. In contrast to this method you could also just pass
 the `id` to the function that needs to use it, like in case of `f_but` in the
 code above.
 
-There is a simpler way to access the ids as defined in the kv language for example:
+There is a simpler way to access objects with `id` tags in Kv using the
+`ids` lookup object. You can do this as follows:
 
 .. code-block:: kv
 
@@ -342,8 +347,8 @@ In your python code:
 
         def hulk_smash(self):
             self.ids.hulk.text = "hulk: puny god!"
-            self.ids.loki.text = "loki: >_<!!!"
-
+            self.ids["loki"].text = "loki: >_<!!!"  # alternative syntax
+            
 When your kv file is parsed, kivy collects all the widgets tagged with id's
 and places them in this `self.ids` dictionary type property. That means you
 can also iterate over these widgets and access them dictionary style::
@@ -351,6 +356,12 @@ can also iterate over these widgets and access them dictionary style::
     for key, val in self.ids.items():
         print("key={0}, val={1}".format(key, val))
 
+.. Note::
+
+    Although the `self.ids` method is very concise, it is generally regarded as
+    'best practise' to use the ObjectProperty. This creates a direct reference,
+    provides faster access and is more explicit.
+        
 Dynamic Classes
 ---------------
 Consider the code below:

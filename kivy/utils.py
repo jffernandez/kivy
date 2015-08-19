@@ -3,14 +3,19 @@
 Utils
 =====
 
+The Utils module provides a selection of general utility functions and classes
+that may be useful for various applications. These include maths, color,
+algebraic and platform functions.
+
 .. versionchanged:: 1.6.0
-    The OrderedDict class has been removed. Use the collections.OrderedDict.
+    The OrderedDict class has been removed. Use collections.OrderedDict
+    instead.
 
 '''
 
 __all__ = ('intersection', 'difference', 'strtotuple',
            'get_color_from_hex', 'get_hex_from_color', 'get_random_color',
-           'is_color_transparent', 'boundary',
+           'is_color_transparent', 'hex_colormap', 'colormap', 'boundary',
            'deprecated', 'SafeList',
            'interpolate', 'QueryDict',
            'platform', 'escape_markup', 'reify')
@@ -18,9 +23,6 @@ __all__ = ('intersection', 'difference', 'strtotuple',
 from os import environ
 from sys import platform as _sys_platform
 from re import match, split
-
-_platform_android = None
-_platform_ios = None
 
 
 def boundary(value, minvalue, maxvalue):
@@ -134,6 +136,157 @@ def is_color_transparent(c):
         return True
     return False
 
+hex_colormap = {
+    'aliceblue': '#f0f8ff',
+    'antiquewhite': '#faebd7',
+    'aqua': '#00ffff',
+    'aquamarine': '#7fffd4',
+    'azure': '#f0ffff',
+    'beige': '#f5f5dc',
+    'bisque': '#ffe4c4',
+    'black': '#000000',
+    'blanchedalmond': '#ffebcd',
+    'blue': '#0000ff',
+    'blueviolet': '#8a2be2',
+    'brown': '#a52a2a',
+    'burlywood': '#deb887',
+    'cadetblue': '#5f9ea0',
+    'chartreuse': '#7fff00',
+    'chocolate': '#d2691e',
+    'coral': '#ff7f50',
+    'cornflowerblue': '#6495ed',
+    'cornsilk': '#fff8dc',
+    'crimson': '#dc143c',
+    'cyan': '#00ffff',
+    'darkblue': '#00008b',
+    'darkcyan': '#008b8b',
+    'darkgoldenrod': '#b8860b',
+    'darkgray': '#a9a9a9',
+    'darkgrey': '#a9a9a9',
+    'darkgreen': '#006400',
+    'darkkhaki': '#bdb76b',
+    'darkmagenta': '#8b008b',
+    'darkolivegreen': '#556b2f',
+    'darkorange': '#ff8c00',
+    'darkorchid': '#9932cc',
+    'darkred': '#8b0000',
+    'darksalmon': '#e9967a',
+    'darkseagreen': '#8fbc8f',
+    'darkslateblue': '#483d8b',
+    'darkslategray': '#2f4f4f',
+    'darkslategrey': '#2f4f4f',
+    'darkturquoise': '#00ced1',
+    'darkviolet': '#9400d3',
+    'deeppink': '#ff1493',
+    'deepskyblue': '#00bfff',
+    'dimgray': '#696969',
+    'dimgrey': '#696969',
+    'dodgerblue': '#1e90ff',
+    'firebrick': '#b22222',
+    'floralwhite': '#fffaf0',
+    'forestgreen': '#228b22',
+    'fuchsia': '#ff00ff',
+    'gainsboro': '#dcdcdc',
+    'ghostwhite': '#f8f8ff',
+    'gold': '#ffd700',
+    'goldenrod': '#daa520',
+    'gray': '#808080',
+    'grey': '#808080',
+    'green': '#008000',
+    'greenyellow': '#adff2f',
+    'honeydew': '#f0fff0',
+    'hotpink': '#ff69b4',
+    'indianred': '#cd5c5c',
+    'indigo': '#4b0082',
+    'ivory': '#fffff0',
+    'khaki': '#f0e68c',
+    'lavender': '#e6e6fa',
+    'lavenderblush': '#fff0f5',
+    'lawngreen': '#7cfc00',
+    'lemonchiffon': '#fffacd',
+    'lightblue': '#add8e6',
+    'lightcoral': '#f08080',
+    'lightcyan': '#e0ffff',
+    'lightgoldenrodyellow': '#fafad2',
+    'lightgreen': '#90ee90',
+    'lightgray': '#d3d3d3',
+    'lightgrey': '#d3d3d3',
+    'lightpink': '#ffb6c1',
+    'lightsalmon': '#ffa07a',
+    'lightseagreen': '#20b2aa',
+    'lightskyblue': '#87cefa',
+    'lightslategray': '#778899',
+    'lightslategrey': '#778899',
+    'lightsteelblue': '#b0c4de',
+    'lightyellow': '#ffffe0',
+    'lime': '#00ff00',
+    'limegreen': '#32cd32',
+    'linen': '#faf0e6',
+    'magenta': '#ff00ff',
+    'maroon': '#800000',
+    'mediumaquamarine': '#66cdaa',
+    'mediumblue': '#0000cd',
+    'mediumorchid': '#ba55d3',
+    'mediumpurple': '#9370db',
+    'mediumseagreen': '#3cb371',
+    'mediumslateblue': '#7b68ee',
+    'mediumspringgreen': '#00fa9a',
+    'mediumturquoise': '#48d1cc',
+    'mediumvioletred': '#c71585',
+    'midnightblue': '#191970',
+    'mintcream': '#f5fffa',
+    'mistyrose': '#ffe4e1',
+    'moccasin': '#ffe4b5',
+    'navajowhite': '#ffdead',
+    'navy': '#000080',
+    'oldlace': '#fdf5e6',
+    'olive': '#808000',
+    'olivedrab': '#6b8e23',
+    'orange': '#ffa500',
+    'orangered': '#ff4500',
+    'orchid': '#da70d6',
+    'palegoldenrod': '#eee8aa',
+    'palegreen': '#98fb98',
+    'paleturquoise': '#afeeee',
+    'palevioletred': '#db7093',
+    'papayawhip': '#ffefd5',
+    'peachpuff': '#ffdab9',
+    'peru': '#cd853f',
+    'pink': '#ffc0cb',
+    'plum': '#dda0dd',
+    'powderblue': '#b0e0e6',
+    'purple': '#800080',
+    'red': '#ff0000',
+    'rosybrown': '#bc8f8f',
+    'royalblue': '#4169e1',
+    'saddlebrown': '#8b4513',
+    'salmon': '#fa8072',
+    'sandybrown': '#f4a460',
+    'seagreen': '#2e8b57',
+    'seashell': '#fff5ee',
+    'sienna': '#a0522d',
+    'silver': '#c0c0c0',
+    'skyblue': '#87ceeb',
+    'slateblue': '#6a5acd',
+    'slategray': '#708090',
+    'slategrey': '#708090',
+    'snow': '#fffafa',
+    'springgreen': '#00ff7f',
+    'steelblue': '#4682b4',
+    'tan': '#d2b48c',
+    'teal': '#008080',
+    'thistle': '#d8bfd8',
+    'tomato': '#ff6347',
+    'turquoise': '#40e0d0',
+    'violet': '#ee82ee',
+    'wheat': '#f5deb3',
+    'white': '#ffffff',
+    'whitesmoke': '#f5f5f5',
+    'yellow': '#ffff00',
+    'yellowgreen': '#9acd32',
+}
+
+colormap = {k: get_color_from_hex(v) for k, v in hex_colormap.items()}
 
 DEPRECATED_CALLERS = []
 
@@ -182,7 +335,7 @@ class SafeList(list):
     @deprecated
     def iterate(self, reverse=False):
         if reverse:
-            return reversed(iter(self))
+            return iter(reversed(self))
         return iter(self)
 
 
@@ -211,13 +364,13 @@ class QueryDict(dict):
 
 
 def format_bytes_to_human(size, precision=2):
-    '''Format a bytes value to a human readable representation (B, KB, MB...).
+    '''Format a byte value to a human readable representation (B, KB, MB...).
 
     .. versionadded:: 1.0.8
 
     :Parameters:
         `size`: int
-            Number that represents a bytes value
+            Number that represents the bytes value
         `precision`: int, defaults to 2
             Precision after the comma
 
@@ -240,7 +393,10 @@ def format_bytes_to_human(size, precision=2):
 class Platform(object):
     # refactored to class to allow module function to be replaced
     # with module variable
-    _platform = None
+
+    def __init__(self):
+        self._platform_ios = None
+        self._platform_android = None
 
     @deprecated
     def __call__(self):
@@ -265,23 +421,19 @@ class Platform(object):
         return self._get_platform().__hash__()
 
     def _get_platform(self):
-        if self._platform is not None:
-            return self._platform
-        global _platform_ios, _platform_android
-
-        if _platform_android is None:
+        if self._platform_android is None:
             # ANDROID_ARGUMENT and ANDROID_PRIVATE are 2 environment variables
             # from python-for-android project
-            _platform_android = 'ANDROID_ARGUMENT' in environ
+            self._platform_android = 'ANDROID_ARGUMENT' in environ
 
-        if _platform_ios is None:
-            _platform_ios = (environ.get('KIVY_BUILD', '') == 'ios')
+        if self._platform_ios is None:
+            self._platform_ios = (environ.get('KIVY_BUILD', '') == 'ios')
 
         # On android, _sys_platform return 'linux2', so prefer to check the
         # import of Android module than trying to rely on _sys_platform.
-        if _platform_android is True:
+        if self._platform_android is True:
             return 'android'
-        elif _platform_ios is True:
+        elif self._platform_ios is True:
             return 'ios'
         elif _sys_platform in ('win32', 'cygwin'):
             return 'win'
@@ -289,32 +441,28 @@ class Platform(object):
             return 'macosx'
         elif _sys_platform[:5] == 'linux':
             return 'linux'
+        elif _sys_platform.startswith('freebsd'):
+            return 'linux'
         return 'unknown'
 
 
 platform = Platform()
 '''
-.. versionadded:: 1.3.0
-
-Deprecated since 1.8.0:  Use platform as variable instaed of a function.\n
-Calling platform() will return one of: *win*, *linux*, *android*, *macosx*,
-*ios* or *unknown*.
-
-.. versionchanged:: 1.8.0
-
-`platform` also behaves like a regular variable in comparisons like so::
+platform is a string describing the current Operating System. It is one
+of: *win*, *linux*, *android*, *macosx*, *ios* or *unknown*.
+You can use it as follows::
 
     from kivy import platform
     if platform == 'linux':
         do_linux_things()
     if platform() == 'linux': # triggers deprecation warning
         do_more_linux_things()
-    foo = {'linux' : do_linux_things}
-    foo[platform]() # calls do_linux_things
-    p = platform # assigns to a module object
-    if p == 'android':
-        do_android_things()
-    p += 'some string' # error!
+
+.. versionadded:: 1.3.0
+
+.. versionchanged:: 1.8.0
+
+    platform is now a variable instead of a  function.
 
 '''
 
@@ -330,7 +478,7 @@ def escape_markup(text):
 
     .. versionadded:: 1.3.0
     '''
-    return text.replace('[', '&bl;').replace(']', '&br;').replace('&', '&amp;')
+    return text.replace('&', '&amp;').replace('[', '&bl;').replace(']', '&br;')
 
 
 class reify(object):
@@ -344,6 +492,15 @@ class reify(object):
     attribute creation on objects that are meant to be immutable.
 
     Taken from the `Pyramid project <https://pypi.python.org/pypi/pyramid/>`_.
+
+    To use this as a decorator::
+
+         @reify
+         def lazy(self):
+              ...
+              return hard_to_compute_int
+         first_time = self.lazy   # lazy is reify obj, reify.__get__() runs
+         second_time = self.lazy  # lazy is hard_to_compute_int
     '''
 
     def __init__(self, func):

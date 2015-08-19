@@ -150,6 +150,9 @@ class WindowPygame(WindowBase):
             else:
                 raise CoreCriticalException(e.message)
 
+        if pygame.RESIZABLE & self.flags:
+            self._pygame_set_mode()
+
         info = pygame.display.Info()
         self._size = (info.current_w, info.current_h)
         #self.dispatch('on_resize', *self._size)
@@ -332,6 +335,23 @@ class WindowPygame(WindowBase):
                 self._mouse_btn = btn
                 self._mouse_down = eventname == 'on_mouse_down'
                 self.dispatch(eventname, x, y, btn, self.modifiers)
+
+            # joystick action
+            elif event.type == pygame.JOYAXISMOTION:
+                self.dispatch('on_joy_axis', event.joy, event.axis, event.value)
+
+            elif event.type == pygame.JOYHATMOTION:
+                self.dispatch('on_joy_hat', event.joy, event.hat, event.value)
+
+            elif event.type == pygame.JOYBALLMOTION:
+                self.dispatch('on_joy_ball', event.joy, event.ballid,
+                            event.rel[0], event.rel[1])
+
+            elif event.type == pygame.JOYBUTTONDOWN:
+                self.dispatch('on_joy_button_down', event.joy, event.button)
+
+            elif event.type == pygame.JOYBUTTONUP:
+                self.dispatch('on_joy_button_up', event.joy, event.button)
 
             # keyboard action
             elif event.type in (pygame.KEYDOWN, pygame.KEYUP):

@@ -130,7 +130,7 @@ Wrap mode         Supported     Supported     No
 
 If you create a NPOT texture, we first check whether your hardware
 supports it by checking the extensions GL_ARB_texture_non_power_of_two or
-OES_texture_npot. If none of theses are available, we create the nearest
+OES_texture_npot. If none of these are available, we create the nearest
 POT texture that can contain your NPOT texture. The :meth:`Texture.create` will
 return a :class:`TextureRegion` instead.
 
@@ -223,6 +223,7 @@ include "config.pxi"
 include "common.pxi"
 include "opengl_utils_def.pxi"
 include "img_tools.pxi"
+include "gl_debug_logger.pxi"
 
 cimport cython
 from os import environ
@@ -463,6 +464,7 @@ cdef inline void _gl_prepare_pixels_upload(int width) nogil:
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
 
+
 cdef Texture _texture_create(int width, int height, colorfmt, bufferfmt,
                      int mipmap, int allocate, object callback, object icolorfmt):
     '''Create the OpenGL texture.
@@ -532,7 +534,7 @@ def texture_create(size=None, colorfmt=None, bufferfmt=None, mipmap=False,
             Color format of the texture. Can be 'rgba' or 'rgb',
             'luminance' or 'luminance_alpha'. On desktop, additionnal values are
             available: 'red', 'rg'.
-        `icolorfmt`: str, default to the value of `colorfmt`
+        `icolorfmt`: str, defaults to the value of `colorfmt`
             Internal format storage of the texture. Can be 'rgba' or 'rgb',
             'luminance' or 'luminance_alpha'. On desktop, additionnal values are
             available: 'r8', 'rg8', 'rgba8'.
@@ -763,13 +765,16 @@ cdef class Texture:
         # if we have no change to apply, just bind and exit
         if not self.flags:
             glBindTexture(self._target, self._id)
+            log_gl_error('Texture.bind-glBindTexture')
             return
 
         if self.flags & TI_NEED_GEN:
             self.flags &= ~TI_NEED_GEN
             glGenTextures(1, &self._id)
+            log_gl_error('Texture.bind-glGenTextures')
 
         glBindTexture(self._target, self._id)
+        log_gl_error('Texture.bind-glBindTexture')
 
         if self.flags & TI_NEED_ALLOCATE:
             self.flags &= ~TI_NEED_ALLOCATE
@@ -785,17 +790,21 @@ cdef class Texture:
             self.flags &= ~TI_MIN_FILTER
             value = _str_to_gl_texture_min_filter(self._min_filter)
             glTexParameteri(self._target, GL_TEXTURE_MIN_FILTER, value)
+            log_gl_error('Texture.bind-glTexParameteri (GL_TEXTURE_MIN_FILTER)')
 
         if self.flags & TI_MAG_FILTER:
             self.flags &= ~TI_MAG_FILTER
             value = _str_to_gl_texture_mag_filter(self._mag_filter)
             glTexParameteri(self._target, GL_TEXTURE_MAG_FILTER, value)
+            log_gl_error('Texture.bind-glTexParameteri (GL_TEXTURE_MAG_FILTER')
 
         if self.flags & TI_WRAP:
             self.flags &= ~TI_WRAP
             value = _str_to_gl_texture_wrap(self._wrap)
             glTexParameteri(self._target, GL_TEXTURE_WRAP_S, value)
+            log_gl_error('Texture.bind-glTexParameteri (GL_TEXTURE_WRAP_S)')
             glTexParameteri(self._target, GL_TEXTURE_WRAP_T, value)
+            log_gl_error('Texture.bind-glTexParameteri (GL_TEXTURE_WRAP_T')
 
     cdef void set_min_filter(self, x):
         if self._min_filter != x:
@@ -997,9 +1006,12 @@ cdef class Texture:
                 glCompressedTexImage2D(target, _mipmap_level, glfmt, w, h, 0,
                         <GLsizei>datasize, cdata)
             elif is_allocated:
-                glTexSubImage2D(target, _mipmap_level, x, y, w, h, glfmt, glbufferfmt, cdata)
+                glTexSubImage2D(target, _mipmap_level, x, y, w, h, glfmt,
+                    glbufferfmt, cdata)
             else:
-                glTexImage2D(target, _mipmap_level, iglfmt, w, h, 0, glfmt, glbufferfmt, cdata)
+                glTexImage2D(target, _mipmap_level, iglfmt, w, h, 0, glfmt,
+                    glbufferfmt, cdata)
+                
             if _mipmap_generation:
                 glGenerateMipmap(target)
 
@@ -1110,7 +1122,7 @@ cdef class Texture:
 
         .. versionchanged:: 1.8.0
 
-            Parameter `flipped` added, default to True. All the OpenGL Texture
+            Parameter `flipped` added, defaults to True. All the OpenGL Texture
             are readed from bottom / left, it need to be flipped before saving.
             If you don't want to flip the image, set flipped to False.
         '''

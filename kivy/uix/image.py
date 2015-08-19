@@ -73,7 +73,9 @@ class Image(Widget):
     '''
 
     texture = ObjectProperty(None, allownone=True)
-    '''Texture object of the image.
+    '''Texture object of the image. The texture represents the original, loaded
+    image texture. It is streched and positioned during rendering according to
+    the :attr:`allow_stretch` and :attr:`keep_ratio` properties.
 
     Depending of the texture creation, the value will be a
     :class:`~kivy.graphics.texture.Texture` or a
@@ -84,7 +86,8 @@ class Image(Widget):
     '''
 
     texture_size = ListProperty([0, 0])
-    '''Texture size of the image.
+    '''Texture size of the image. This represents the original, loaded image
+    texture size.
 
     .. warning::
 
@@ -173,7 +176,7 @@ class Image(Widget):
     anim_loop = NumericProperty(0)
     '''Number of loops to play then stop animating. 0 means keep animating.
 
-    .. versionadded 1.9.0
+    .. versionadded:: 1.9.0
 
     :attr:`anim_loop` is a :class:`~kivy.properties.NumericProperty` defaults
     to 0.
@@ -232,10 +235,12 @@ class Image(Widget):
         self._coreimage = None
         self._loops = 0
         super(Image, self).__init__(**kwargs)
-        self.bind(source=self.texture_update,
-                  mipmap=self.texture_update)
+        fbind = self.fbind
+        update = self.texture_update
+        fbind('source', update)
+        fbind('mipmap', update)
         if self.source:
-            self.texture_update()
+            update()
 
     def texture_update(self, *largs):
         if not self.source:
@@ -297,7 +302,12 @@ class Image(Widget):
             # image will be re-loaded from disk
 
         '''
-        self._coreimage.remove_from_cache()
+        try:
+            self._coreimage.remove_from_cache()
+
+        except AttributeError:
+            pass
+
         olsource = self.source
         self.source = ''
         self.source = olsource
@@ -326,7 +336,7 @@ class AsyncImage(Image):
         global Loader
         if not Loader:
             from kivy.loader import Loader
-        self.bind(source=self._load_source)
+        self.fbind('source', self._load_source)
         if self.source:
             self._load_source()
 

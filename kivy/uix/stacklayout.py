@@ -125,13 +125,14 @@ class StackLayout(Layout):
 
     def __init__(self, **kwargs):
         super(StackLayout, self).__init__(**kwargs)
-        self.bind(
-            padding=self._trigger_layout,
-            spacing=self._trigger_layout,
-            children=self._trigger_layout,
-            orientation=self._trigger_layout,
-            size=self._trigger_layout,
-            pos=self._trigger_layout)
+        trigger = self._trigger_layout
+        fbind = self.fbind
+        fbind('padding', trigger)
+        fbind('spacing', trigger)
+        fbind('children', trigger)
+        fbind('orientation', trigger)
+        fbind('size', trigger)
+        fbind('pos', trigger)
 
     def do_layout(self, *largs):
         if not self.children:
@@ -210,9 +211,8 @@ class StackLayout(Layout):
         sizes = []
         for c in reversed(self.children):
             if c.size_hint[outerattr]:
-                c.size[outerattr] = max(
-                    1, c.size_hint[outerattr] *
-                       (selfsize[outerattr] - padding_v))
+                c.size[outerattr] = max(1,
+                    c.size_hint[outerattr] * (selfsize[outerattr] - padding_v))
 
             # does the widget fit in the row/column?
             ccount = len(lc)

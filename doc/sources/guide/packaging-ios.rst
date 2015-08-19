@@ -5,35 +5,37 @@ Create a package for IOS
 
 .. versionadded:: 1.2.0
 
-.. warning::
+.. note::
 
-    This process is still under development.
+    From the 4th march 2015, the toolchain for iOS has been rewritten. The
+    previous instructions don't work anymore (using `build_all.sh`). We
+    strongly recommend you upgrade to the latest toochain which contains many
+    improvements, including support for i386, x86_64, armv7, arm64 and the
+    iOS emulators. If you must use the older version, try the old-toolchain
+    tag in git.
+
+.. note::
+
+    Currently, packages for iOS can only be generated with Python 2.7. Python
+    3.3+ support is on the way.
 
 The overall process for creating a package for IOS can be explained in 4 steps:
 
 #. Compile python + modules for IOS
-#. Create an Xcode project
-#. Populate the Xcode project with your application source code
+#. Create an Xcode project and link your source code
 #. Customize
-
-This process has been tested with Xcode 4.2.
-
-+---------------------------------------------------------------------------------------------------------------+
-| NOTE: Currently, packages for iOS can only be generated with Python 2.7. Python 3.3+ support is on the way... |
-+---------------------------------------------------------------------------------------------------------------+
 
 Prerequisites
 -------------
 
-You need to install some dependencies, like cython or mercurial. If you're
-using Xcode 4.3, then you also need to install autotools. We encourage you to
-use `Homebrew <http://mxcl.github.com/homebrew/>`_ to install thoses dependencies::
+You need to install some dependencies, like cython, autotools, etc. We
+encourage you to use `Homebrew <http://mxcl.github.com/homebrew/>`_ to install
+thoses dependencies::
 
-    brew install autoconf automake libtool pkg-config mercurial
+    brew install autoconf automake libtool pkg-config
     brew link libtool
-    brew link mercurial
     sudo easy_install pip
-    sudo pip install cython
+    sudo pip install cython==0.21.2
 
 For more detail, see :ref:`IOS Prerequisites <packaging_ios_prerequisites>`.
 Just ensure that everything is ok before starting the second step!
@@ -47,14 +49,12 @@ Open a terminal, and type::
 
     $ git clone git://github.com/kivy/kivy-ios
     $ cd kivy-ios
-    $ tools/build-all.sh
+    $ ./toolchain.py build kivy
 
-If you don't want to compile all the things needed for kivy, edit and change
-`tools/build-all.sh` to your needs.
-
-Most of the python distribution will be packed into a `python27.zip`. If you
-experience any issues or would like more detail on this process, please refer
-to :ref:`Compiling for IOS <packaging_ios_compile>`.
+Most of the python distribution is packed into `python27.zip`. If you
+experience any issues, please refer to our
+`user group <https://groups.google.com/forum/#!forum/kivy-users>`_ or the
+`kivy-ios project page <https://github.com/kivy/kivy-ios>`_.
 
 .. _Create an Xcode project:
 
@@ -68,14 +68,39 @@ We provide a script that creates an initial Xcode project to start with. In the
 command line below, replace `test` with your project name. It must be a
 name without any spaces or illegal characters::
 
-    $ tools/create-xcode-project.sh test /path/to/your/appdir
+    $ # ./toolchain.py create <title> <app_directory>
+    $ ./toolchain.py create Touchtracer ~/code/kivy/examples/demo/touchtracer
 
 .. Note::
     You must use a fully qualified path to your application directory.
 
-Now you can open the Xcode project::
+A directory named `<title>-ios` will be created, with an Xcode project in it.
+You can open the Xcode project::
 
-    $ open app-test/test.xcodeproj
+    $ open touchtracer-ios/touchtracer.xcodeproj
+
+Then click on `Play`, and enjoy.
+
+.. Note::
+
+    Everytime you press `Play`, your application directory will be synced to
+    the `<title>-ios/YourApp` directory. Don't make changes in the -ios
+    directory directly.
+
+Updating an Xcode project
+-------------------------
+
+Let's say you want to add numpy to your project, but you didn't have it compiled
+prior the XCode project creation. First, ensure to build it::
+
+    $ ./toolchain.py build numpy
+
+Then, update your Xcode project::
+
+    $ ./toolchain.py update touchtracer-ios
+
+All the libraries / frameworks necessary to run all the compiled recipes will be
+added to your Xcode project.
 
 .. _Customize:
 
@@ -87,9 +112,6 @@ You can customize the build in many ways:
 #. Minimize the `build/python/lib/python27.zip`: this contains all the python
    modules. You can edit the zip file and remove all the files you'll not use
    (reduce encodings, remove xml, email...)
-#. Remove the .a not used: in Xcode, select your target, go in `Build Phases`,
-   then check the `Link Binary With Libraries`. You can remove the libraries
-   not used by your application.
 #. Change the icon, orientation, etc... According to the Apple policy :)
 #. Go to the settings panel > build, search for "strip" options, and
    triple-check that they are all set to NO. Stripping does not work with
